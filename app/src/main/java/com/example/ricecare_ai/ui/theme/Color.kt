@@ -14,9 +14,3 @@ val Gray600 = Color(0xFF757575)
 val Gray700 = Color(0xFF616161)
 val Gray800 = Color(0xFF424242)
 val Gray900 = Color(0xFF212121)
-
-// Accent colors for status
-val SuccessGreen = Color(0xFF4CAF50)
-val WarningOrange = Color(0xFFFF9800)
-val DangerRed = Color(0xFFF44336)
-val InfoBlue = Color(0xFF2196F3)

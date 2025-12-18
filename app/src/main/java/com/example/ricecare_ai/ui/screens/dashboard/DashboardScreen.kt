@@ -1,5 +1,6 @@
 package com.example.ricecare_ai.ui.screens.dashboard
 
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -15,15 +16,14 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.graphics.Canvas
-import androidx.compose.ui.graphics.drawscope.DrawScope
-import androidx.compose.foundation.Canvas
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.ricecare_ai.viewmodel.DashboardViewModel
+import com.example.ricecare_ai.viewmodel.SharedViewModels
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -31,8 +31,22 @@ fun DashboardScreen(
     onNavigateToUpload: () -> Unit,
     onNavigateToChat: () -> Unit,
     onNavigateToHistory: () -> Unit,
-    onNavigateToSettings: () -> Unit = {}
+    onNavigateToSettings: () -> Unit = {},
+    authToken: String? = null,
+    userName: String = "User"
 ) {
+    val viewModel = SharedViewModels.getDashboardViewModel()
+    val uiState by viewModel.uiState.collectAsState()
+    
+    // Set token and load data
+    LaunchedEffect(authToken, userName) {
+        viewModel.setAuthToken(authToken)
+        viewModel.setUserName(userName)
+        if (authToken != null) {
+            viewModel.loadDashboardData()
+        }
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -41,7 +55,7 @@ fun DashboardScreen(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        // Logo (clickable)
+                        // Settings icon
                         Box(
                             modifier = Modifier
                                 .size(40.dp)
@@ -67,10 +81,17 @@ fun DashboardScreen(
                                 fontWeight = FontWeight.Bold
                             )
                             Text(
-                                text = "Xin chào, User",
+                                text = "Xin chào, ${uiState.userName}",
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
                             )
+                        }
+                    }
+                },
+                actions = {
+                    if (authToken != null) {
+                        IconButton(onClick = { viewModel.refresh() }) {
+                            Icon(Icons.Default.Refresh, contentDescription = "Refresh")
                         }
                     }
                 },
@@ -80,131 +101,108 @@ fun DashboardScreen(
             )
         }
     ) { paddingValues ->
-        DashboardScreenContent(
+        DashboardContent(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues),
+            uiState = uiState,
+            isLoggedIn = authToken != null,
             onNavigateToUpload = onNavigateToUpload,
             onNavigateToChat = onNavigateToChat,
-            onNavigateToHistory = onNavigateToHistory
+            onNavigateToHistory = onNavigateToHistory,
+            onDismissError = { viewModel.dismissError() }
         )
     }
 }
 
 @Composable
-internal fun DashboardScreenContent(
+private fun DashboardContent(
     modifier: Modifier = Modifier,
-    onNavigateToUpload: () -> Unit = {},
-    onNavigateToChat: () -> Unit = {},
-    onNavigateToHistory: () -> Unit = {},
-    onNavigateToSettings: () -> Unit = {},
-    hasData: Boolean = true // Giả định có dữ liệu để demo
+    uiState: com.example.ricecare_ai.viewmodel.DashboardUiState,
+    isLoggedIn: Boolean,
+    onNavigateToUpload: () -> Unit,
+    onNavigateToChat: () -> Unit,
+    onNavigateToHistory: () -> Unit,
+    onDismissError: () -> Unit
 ) {
     Column(
-        modifier = Modifier
-            .fillMaxSize()
+        modifier = modifier
             .verticalScroll(rememberScrollState())
+            .padding(16.dp)
     ) {
-        // Top Bar with Logo
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp)
-        ) {
-            // Logo (clickable)
-            Box(
-                modifier = Modifier
-                    .size(40.dp)
-                    .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.primaryContainer)
-                    .clickable { onNavigateToSettings() },
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Settings,
-                    contentDescription = "Settings",
-                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                    modifier = Modifier.size(24.dp)
-                )
-            }
-            
-            Spacer(modifier = Modifier.width(12.dp))
-            
-            Column {
-                Text(
-                    text = "RiceCare AI",
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    text = "Xin chào, User",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
-                )
-            }
-        }
-        
-        Column(
-            modifier = Modifier.padding(horizontal = 16.dp)
-        ) {
-            if (!hasData) {
-            // Empty state
+        // Error display
+        uiState.error?.let { error ->
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant
+                    containerColor = MaterialTheme.colorScheme.errorContainer
                 )
             ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(24.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
+                Row(
+                    modifier = Modifier.padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.Add,
-                        contentDescription = null,
-                        modifier = Modifier.size(64.dp),
-                        tint = MaterialTheme.colorScheme.primary
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
                     Text(
-                        text = "Bạn chưa có kết quả nào.",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold
+                        text = error,
+                        color = MaterialTheme.colorScheme.onErrorContainer,
+                        modifier = Modifier.weight(1f)
                     )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = "Bắt đầu bằng Upload ảnh.",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                    TextButton(onClick = onDismissError) {
+                        Text("Đóng")
+                    }
                 }
             }
-        } else {
-            // Statistics Cards
+            Spacer(modifier = Modifier.height(16.dp))
+        }
+        
+        // Loading indicator
+        if (uiState.isLoading) {
+            LinearProgressIndicator(
+                modifier = Modifier.fillMaxWidth()
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+        }
+
+        // Statistics Section (only if logged in and has data)
+        if (isLoggedIn && uiState.totalPredictions > 0) {
             Text(
-                text = "Thống kê",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold,
-                modifier = Modifier.padding(bottom = 12.dp)
+                text = "Thống kê chẩn đoán",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(bottom = 16.dp)
             )
             
+            // First row - Total predictions
+            StatCard(
+                title = "Tổng lượt chẩn đoán",
+                value = "${uiState.totalPredictions}",
+                percentage = "",
+                modifier = Modifier.fillMaxWidth()
+            )
+            
+            Spacer(modifier = Modifier.height(12.dp))
+            
+            // Second row - Healthy and diseased counts
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 StatCard(
-                    title = "Lần chẩn đoán gần nhất",
-                    value = "Đạo ôn",
-                    percentage = "93%",
+                    title = "Lá khỏe mạnh",
+                    value = "${uiState.healthyCount}",
+                    percentage = if (uiState.totalPredictions > 0) 
+                        "${(uiState.healthyCount * 100.0 / uiState.totalPredictions).toInt()}%" 
+                    else "",
+                    color = Color(0xFFBDBDBD), // Gray400 for healthy
                     modifier = Modifier.weight(1f)
                 )
                 StatCard(
-                    title = "Tổng lượt",
-                    value = "12",
-                    percentage = "",
+                    title = "Phát hiện bệnh",
+                    value = "${uiState.diseasedCount}",
+                    percentage = if (uiState.totalPredictions > 0) 
+                        "${(uiState.diseasedCount * 100.0 / uiState.totalPredictions).toInt()}%" 
+                    else "",
+                    color = Color(0xFF757575), // Gray600 for disease
                     modifier = Modifier.weight(1f)
                 )
             }
@@ -234,30 +232,26 @@ internal fun DashboardScreenContent(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        // Mini Pie Chart
                         MiniPieChart(
-                            diseaseCount = 7,
-                            healthyCount = 5,
+                            diseaseCount = uiState.diseasedCount,
+                            healthyCount = uiState.healthyCount,
                             modifier = Modifier.size(80.dp)
                         )
                         
                         Spacer(modifier = Modifier.width(16.dp))
                         
                         Column(modifier = Modifier.weight(1f)) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
                                 Box(
                                     modifier = Modifier
                                         .size(12.dp)
-                                        .background(
-                                            Color(0xFFEF5350),
-                                            CircleShape
-                                        )
+                                        .background(Color(0xFF757575), CircleShape) // Gray600
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
+                                val diseasePercent = if (uiState.totalPredictions > 0)
+                                    (uiState.diseasedCount * 100.0 / uiState.totalPredictions).toInt() else 0
                                 Text(
-                                    text = "7 bệnh (58%)",
+                                    text = "${uiState.diseasedCount} bệnh ($diseasePercent%)",
                                     style = MaterialTheme.typography.bodyMedium,
                                     fontWeight = FontWeight.Medium
                                 )
@@ -265,20 +259,17 @@ internal fun DashboardScreenContent(
                             
                             Spacer(modifier = Modifier.height(8.dp))
                             
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
                                 Box(
                                     modifier = Modifier
                                         .size(12.dp)
-                                        .background(
-                                            Color(0xFF66BB6A),
-                                            CircleShape
-                                        )
+                                        .background(Color(0xFFBDBDBD), CircleShape) // Gray400
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
+                                val healthyPercent = if (uiState.totalPredictions > 0)
+                                    (uiState.healthyCount * 100.0 / uiState.totalPredictions).toInt() else 0
                                 Text(
-                                    text = "5 khỏe (42%)",
+                                    text = "${uiState.healthyCount} khỏe ($healthyPercent%)",
                                     style = MaterialTheme.typography.bodyMedium,
                                     fontWeight = FontWeight.Medium
                                 )
@@ -289,14 +280,44 @@ internal fun DashboardScreenContent(
             }
             
             Spacer(modifier = Modifier.height(24.dp))
+        } else if (isLoggedIn && !uiState.isLoading) {
+            // Empty state for logged in users
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant
+                )
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text("🌾", style = MaterialTheme.typography.displayMedium)
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        text = "Bạn chưa có kết quả nào",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "Bắt đầu bằng cách upload ảnh lá lúa",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+            Spacer(modifier = Modifier.height(24.dp))
         }
             
         // Main Action Buttons
         Text(
-            text = "Chức năng",
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.SemiBold,
-            modifier = Modifier.padding(bottom = 12.dp)
+            text = "Chức năng chính",
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(bottom = 16.dp)
         )
         
         ActionCard(
@@ -323,8 +344,9 @@ internal fun DashboardScreenContent(
             icon = Icons.Default.Info,
             onClick = onNavigateToHistory
         )
+        
+        Spacer(modifier = Modifier.height(24.dp))
     }
-}
 }
 
 @Composable
@@ -336,15 +358,14 @@ fun MiniPieChart(
     val total = diseaseCount + healthyCount
     val diseaseAngle = if (total > 0) 360f * diseaseCount / total else 0f
     
-    val diseaseColor = Color(0xFFEF5350)
-    val healthyColor = Color(0xFF66BB6A)
+    val diseaseColor = Color(0xFF757575) // Gray600 for disease
+    val healthyColor = Color(0xFFBDBDBD) // Gray400 for healthy
     
     Canvas(modifier = modifier) {
         val canvasSize = size.minDimension
-        val radius = canvasSize / 2
-        val strokeWidth = radius * 0.3f
+        val strokeWidth = canvasSize * 0.3f
         
-        // Draw healthy arc (starts from 0)
+        // Draw healthy arc
         drawArc(
             color = healthyColor,
             startAngle = diseaseAngle,
@@ -366,13 +387,13 @@ fun MiniPieChart(
     }
 }
 
-
 @Composable
 fun StatCard(
     title: String,
     value: String,
     percentage: String,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    color: Color = MaterialTheme.colorScheme.primary
 ) {
     Card(
         modifier = modifier,
@@ -381,9 +402,7 @@ fun StatCard(
         ),
         shape = RoundedCornerShape(12.dp)
     ) {
-        Column(
-            modifier = Modifier.padding(16.dp)
-        ) {
+        Column(modifier = Modifier.padding(16.dp)) {
             Text(
                 text = title,
                 style = MaterialTheme.typography.bodySmall,
@@ -393,14 +412,15 @@ fun StatCard(
             Text(
                 text = value,
                 style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold
+                fontWeight = FontWeight.Bold,
+                color = color
             )
             if (percentage.isNotEmpty()) {
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     text = percentage,
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.primary
+                    color = color.copy(alpha = 0.8f)
                 )
             }
         }

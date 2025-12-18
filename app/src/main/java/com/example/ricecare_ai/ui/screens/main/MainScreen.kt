@@ -1,8 +1,6 @@
 package com.example.ricecare_ai.ui.screens.main
 
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.pager.HorizontalPager
-import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -10,10 +8,11 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
-import com.example.ricecare_ai.ui.screens.chat.ChatScreenContent
-import com.example.ricecare_ai.ui.screens.dashboard.DashboardScreenContent
-import com.example.ricecare_ai.ui.screens.history.HistoryScreenContent
-import com.example.ricecare_ai.ui.screens.upload.UploadScreenContent
+import com.example.ricecare_ai.ui.screens.chat.ChatScreen
+import com.example.ricecare_ai.ui.screens.dashboard.DashboardScreen
+import com.example.ricecare_ai.ui.screens.history.HistoryScreen
+import com.example.ricecare_ai.ui.screens.upload.UploadScreen
+import com.example.ricecare_ai.viewmodel.SharedViewModels
 import kotlinx.coroutines.launch
 
 sealed class BottomNavItem(
@@ -22,30 +21,37 @@ sealed class BottomNavItem(
     val icon: ImageVector,
     val index: Int
 ) {
-    object Dashboard : BottomNavItem("dashboard", "Dashboard", Icons.Default.Home, 0)
-    object Upload : BottomNavItem("upload", "Upload", Icons.Default.Add, 1)
-    object Chat : BottomNavItem("chat", "Chat", Icons.Default.Create, 2)
+    object Dashboard : BottomNavItem("dashboard", "Trang chủ", Icons.Default.Home, 0)
+    object Upload : BottomNavItem("upload", "Phân tích", Icons.Default.Add, 1)
+    object Chat : BottomNavItem("chat", "Tư vấn", Icons.Default.Create, 2)
     object History : BottomNavItem("history", "Lịch sử", Icons.Default.Info, 3)
 }
 
 @Composable
 fun MainScreen(
+    initialPredictionId: String? = null,
     onNavigateToDetail: (String) -> Unit = {},
-    onNavigateToSettings: () -> Unit = {}
+    onNavigateToSettings: () -> Unit = {},
+    onNavigateToChatWithPrediction: (String) -> Unit = {}
 ) {
+    val authViewModel = SharedViewModels.getAuthViewModel()
+    val authState by authViewModel.authState.collectAsState()
+    
     val items = listOf(
         BottomNavItem.Dashboard,
         BottomNavItem.Upload,
         BottomNavItem.Chat,
         BottomNavItem.History
     )
-
-    val pagerState = rememberPagerState(
-        initialPage = 0,
-        pageCount = { items.size }
-    )
-
+    
+    var selectedTab by remember { mutableIntStateOf(if (initialPredictionId != null) 2 else 0) }
+    var pendingPredictionId by remember { mutableStateOf(initialPredictionId) }
     val coroutineScope = rememberCoroutineScope()
+    
+    // Refresh token periodically
+    LaunchedEffect(Unit) {
+        authViewModel.refreshToken { }
+    }
 
     Scaffold(
         bottomBar = {
@@ -62,12 +68,8 @@ fun MainScreen(
                             )
                         },
                         label = { Text(item.title) },
-                        selected = pagerState.currentPage == index,
-                        onClick = {
-                            coroutineScope.launch {
-                                pagerState.animateScrollToPage(index)
-                            }
-                        },
+                        selected = selectedTab == index,
+                        onClick = { selectedTab = index },
                         colors = NavigationBarItemDefaults.colors(
                             selectedIconColor = MaterialTheme.colorScheme.primary,
                             selectedTextColor = MaterialTheme.colorScheme.primary,
@@ -80,19 +82,42 @@ fun MainScreen(
             }
         }
     ) { paddingValues ->
-
-        HorizontalPager(
-            state = pagerState,
+        Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues),
-            userScrollEnabled = true
-        ) { page ->
-            when (page) {
-                0 -> DashboardScreenContent(onNavigateToSettings = onNavigateToSettings)
-                1 -> UploadScreenContent()
-                2 -> ChatScreenContent()
-                3 -> HistoryScreenContent(onNavigateToDetail = onNavigateToDetail)
+                .padding(paddingValues)
+        ) {
+            when (selectedTab) {
+                0 -> DashboardScreen(
+                    onNavigateToUpload = { selectedTab = 1 },
+                    onNavigateToChat = { selectedTab = 2 },
+                    onNavigateToHistory = { selectedTab = 3 },
+                    onNavigateToSettings = onNavigateToSettings,
+                    authToken = authState.token,
+                    userName = authState.displayName ?: "User"
+                )
+                1 -> UploadScreen(
+                    onNavigateToChatWithPrediction = { predictionId ->
+                        pendingPredictionId = predictionId
+                        selectedTab = 2 // Switch to Chat tab
+                    },
+                    onNavigateBack = { selectedTab = 0 },
+                    onNavigateToDashboard = { selectedTab = 0 },
+                    onNavigateToHistory = { selectedTab = 3 },
+                    authToken = authState.token
+                )
+                2 -> ChatScreen(
+                    predictionId = pendingPredictionId?.also { pendingPredictionId = null },
+                    onNavigateBack = { selectedTab = 0 }
+                )
+                3 -> HistoryScreen(
+                    onNavigateToDetail = onNavigateToDetail,
+                    onNavigateBack = { selectedTab = 0 },
+                    onNavigateToDashboard = { selectedTab = 0 },
+                    onNavigateToUpload = { selectedTab = 1 },
+                    onNavigateToChat = { selectedTab = 2 },
+                    authToken = authState.token
+                )
             }
         }
     }

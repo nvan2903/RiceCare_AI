@@ -95,9 +95,18 @@ fun AboutScreen(
                     )
                     
                     Text(
-                        text = "RiceCare AI là ứng dụng hỗ trợ nông dân và những người quan tâm đến cây lúa trong việc chẩn đoán bệnh trên lá lúa một cách nhanh chóng và chính xác.",
+                        text = "RiceCare AI là ứng dụng hỗ trợ nông dân và kỹ thuật viên nông nghiệp trong việc nhận diện bệnh trên lá lúa và tư vấn xử lý bằng mô hình ngôn ngữ lớn (LLM). Ứng dụng sử dụng công nghệ Computer Vision để phân tích hình ảnh lá lúa và phát hiện một số bệnh phổ biến. Sau khi dự đoán, hệ thống LLM sẽ cung cấp các gợi ý xử lý an toàn, mang tính tham khảo cho người dùng.",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f)
+                    )
+                    
+                    Spacer(modifier = Modifier.height(8.dp))
+                    
+                    Text(
+                        text = "Ứng dụng được phát triển với mục đích nghiên cứu – học thuật, phục vụ đồ án tốt nghiệp tại Trường Đại học Công nghệ Thông tin và Truyền thông Việt – Hàn (VKU).",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                        fontWeight = FontWeight.Medium
                     )
                 }
             }
@@ -121,11 +130,11 @@ fun AboutScreen(
                         fontWeight = FontWeight.Bold
                     )
                     
-                    FeatureItem("🔍 Chẩn đoán bệnh lá lúa bằng AI")
-                    FeatureItem("💬 Chat tư vấn với chuyên gia AI")
-                    FeatureItem("📊 Thống kê và lịch sử chẩn đoán")
-                    FeatureItem("📸 Upload ảnh hoặc chụp trực tiếp")
-                    FeatureItem("🎯 Độ chính xác cao với công nghệ Deep Learning")
+                    FeatureItem("• Nhận diện bệnh lá lúa từ ảnh chụp")
+                    FeatureItem("• Tư vấn xử lý bằng AI (LLM)")
+                    FeatureItem("• Lưu lịch sử chẩn đoán")
+                    FeatureItem("• Chatbox hỏi đáp kiến thức nông nghiệp")
+                    FeatureItem("• Đăng nhập bằng Google để đồng bộ dữ liệu")
                 }
             }
 
@@ -159,11 +168,11 @@ fun AboutScreen(
                 }
             }
 
-            // Contact
+            // Disclaimer
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surface
+                    containerColor = MaterialTheme.colorScheme.errorContainer
                 )
             ) {
                 Column(
@@ -173,22 +182,24 @@ fun AboutScreen(
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Text(
-                        text = "Liên hệ & Hỗ trợ",
+                        text = "⚠️ Lưu ý quan trọng",
                         style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onErrorContainer
                     )
                     
                     Text(
-                        text = "Email: support@ricecare.ai\nWebsite: www.ricecare.ai",
+                        text = "Ứng dụng chỉ mang tính hỗ trợ tham khảo, không thay thế chuyên gia nông nghiệp.",
                         style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f)
+                        color = MaterialTheme.colorScheme.onErrorContainer.copy(alpha = 0.9f),
+                        fontWeight = FontWeight.Medium
                     )
                 }
             }
 
             // Copyright
             Text(
-                text = "© 2025 RiceCare AI. All rights reserved.",
+                text = "© 2025 VKU - Đồ án tốt nghiệp\nTrường ĐH Công nghệ Thông tin và Truyền thông Việt – Hàn",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
                 modifier = Modifier.padding(vertical = 8.dp)

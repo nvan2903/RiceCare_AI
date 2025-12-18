@@ -14,18 +14,23 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import coil.compose.AsyncImage
+import com.example.ricecare_ai.viewmodel.AuthState
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AccountScreen(
     onNavigateBack: () -> Unit,
     onLogout: () -> Unit,
-    userName: String = "Nguyễn Văn A",
-    userEmail: String = "nguyenvana@example.com"
+    authState: AuthState
 ) {
     var showLogoutDialog by remember { mutableStateOf(false) }
+    
+    val userName = authState.displayName ?: "Người dùng"
+    val userEmail = authState.userEmail ?: "Chưa có email"
 
     Scaffold(
         topBar = {
@@ -61,25 +66,36 @@ fun AccountScreen(
         ) {
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Avatar placeholder
+            // Avatar - Display Google profile picture or fallback to icon
             Box(
                 modifier = Modifier
                     .size(120.dp)
                     .clip(CircleShape),
                 contentAlignment = Alignment.Center
             ) {
-                Surface(
-                    modifier = Modifier.fillMaxSize(),
-                    color = MaterialTheme.colorScheme.primaryContainer
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Person,
-                        contentDescription = null,
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(24.dp),
-                        tint = MaterialTheme.colorScheme.onPrimaryContainer
+                if (authState.photoUrl != null) {
+                    // Display Google profile picture
+                    AsyncImage(
+                        model = authState.photoUrl,
+                        contentDescription = "Ảnh đại diện",
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
                     )
+                } else {
+                    // Fallback to icon
+                    Surface(
+                        modifier = Modifier.fillMaxSize(),
+                        color = MaterialTheme.colorScheme.primaryContainer
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Person,
+                            contentDescription = null,
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(24.dp),
+                            tint = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                    }
                 }
             }
 
